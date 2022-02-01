@@ -146,15 +146,18 @@ class Cart
      *
      * @param string|array $id
      * @param string $name
+     * @param string $type
      * @param float $price
+     * @param float $commission
      * @param int $quantity
+     * @param int $weight
      * @param array $attributes
      * @param CartCondition|array $conditions
      * @param string $associatedModel
      * @return $this
      * @throws InvalidItemException
      */
-    public function add($id, $name = null, $price = null, $quantity = null, $attributes = array(), $conditions = array(), $associatedModel = null)
+    public function add($id, $name = null, $price = null, $quantity = null, $commission = null, $type = null, $weight = null, $attributes = array(), $conditions = array(), $associatedModel = null)
     {
         // if the first argument is an array,
         // we will need to call add again
@@ -168,6 +171,9 @@ class Cart
                         $item['name'],
                         $item['price'],
                         $item['quantity'],
+                        $item['commission'],
+                        $item['type'],
+                        $item['weight'],
                         Helpers::issetAndHasValueOrAssignDefault($item['attributes'], array()),
                         Helpers::issetAndHasValueOrAssignDefault($item['conditions'], array()),
                         Helpers::issetAndHasValueOrAssignDefault($item['associatedModel'], null)
@@ -179,6 +185,9 @@ class Cart
                     $id['name'],
                     $id['price'],
                     $id['quantity'],
+                    $id['commission'],
+                    $id['type'],
+                    $id['weight'],
                     Helpers::issetAndHasValueOrAssignDefault($id['attributes'], array()),
                     Helpers::issetAndHasValueOrAssignDefault($id['conditions'], array()),
                     Helpers::issetAndHasValueOrAssignDefault($id['associatedModel'], null)
@@ -193,6 +202,9 @@ class Cart
             'name' => $name,
             'price' => Helpers::normalizePrice($price),
             'quantity' => $quantity,
+            'commission' => $commission,
+            'type' => $type,
+            'weight' => $weight,
             'attributes' => new ItemAttributeCollection($attributes),
             'conditions' => $conditions
         );
@@ -201,13 +213,13 @@ class Cart
             $data['associatedModel'] = $associatedModel;
         }
 
-        // validate data
+        // validate data again
         $item = $this->validate($data);
 
         // get the cart
         $cart = $this->getContent();
 
-        // if the item is already in the cart we will just update it
+        // if the item is already in the cart we will just update it again
         if ($cart->has($id)) {
 
             $this->update($id, $item);
@@ -567,6 +579,51 @@ class Cart
         });
 
         return Helpers::formatValue(floatval($sum), $formatted, $this->config);
+    }
+
+        /**
+     * get total weight of items in the cart
+     *
+     * @return int
+     */
+    public function getTotalWeight()
+    {
+        $items = $this->getContent();
+
+        if( $items->isEmpty() ) return 0;
+
+        $count = $items->sum(function($item)
+        {
+            return $item['weight'] * $item['quantity'];
+        });
+
+        return $count;
+    }
+
+    public function getTotalCommission()
+    {
+        $items = $this->getContent();
+
+        if( $items->isEmpty() ) return 0;
+
+        $count = $items->sum(function($item)
+        {
+            return $item['commission'] * $item['quantity'];
+        });
+
+        return $count;
+    }
+
+    public function getSupplier()
+    {
+        $items = $this->getContent();
+        $firstitem = $items->first();
+
+        $supplier = $firstitem->associatedModel->user_id;
+
+        if( $items->isEmpty() ) return 0;
+
+        return $supplier;
     }
 
     /**
